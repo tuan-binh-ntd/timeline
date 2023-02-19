@@ -25,14 +25,16 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE Timeline(
           Id INTEGER PRIMARY KEY,
-          Name TEXT
+          StartTime TEXT,
+          FinishTime TEXT
       )
       ''');
   }
 
-  Future<List<TimelineModel>> getGroceries() async {
+  Future<List<TimelineModel>> getTimelineList() async {
     Database db = await instance.database;
-    var timeline = await db.query('Timeline', orderBy: 'name');
+    //ar timeline = await db.query('Timeline', orderBy: 'Time');
+    var timeline = await db.rawQuery("SELECT id, startTime, finishTime, ROUND((JULIANDAY(FinishTime) - JULIANDAY(StartTime)) * 86400) AS time FROM Timeline;");
     List<TimelineModel> timelineList = timeline.isNotEmpty
         ? timeline.map((c) => TimelineModel.fromMap(c)).toList()
         : [];
@@ -42,5 +44,11 @@ class DatabaseHelper {
   Future<int> add(TimelineModel timeline) async {
     Database db = await instance.database;
     return await db.insert('Timeline', timeline.toMap());
+  }
+
+  Future<String> timeTotal() async {
+    Database db = await instance.database;
+    List<Map> timeline = await db.rawQuery("SELECT SUM( ROUND( ( JULIANDAY(FinishTime) - JULIANDAY(StartTime) ) * 86400) ) AS time FROM Timeline;");
+    return (timeline[0]['time'] as String);
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -33,8 +34,8 @@ class DatabaseHelper {
 
   Future<List<TimelineModel>> getTimelineList() async {
     Database db = await instance.database;
-    //ar timeline = await db.query('Timeline', orderBy: 'Time');
-    var timeline = await db.rawQuery("SELECT id, startTime, finishTime, ROUND((JULIANDAY(FinishTime) - JULIANDAY(StartTime)) * 86400) AS time FROM Timeline;");
+    var timeline = await db.rawQuery(
+        "SELECT id, startTime, finishTime, ROUND((JULIANDAY(FinishTime) - JULIANDAY(StartTime)) * 86400) AS Time FROM Timeline;");
     List<TimelineModel> timelineList = timeline.isNotEmpty
         ? timeline.map((c) => TimelineModel.fromMap(c)).toList()
         : [];
@@ -43,12 +44,37 @@ class DatabaseHelper {
 
   Future<int> add(TimelineModel timeline) async {
     Database db = await instance.database;
-    return await db.insert('Timeline', timeline.toMap());
+    return await db.rawInsert(
+        "INSERT INTO Timeline(StartTime, FinishTime) VALUES (?, ?)",
+        [timeline.startTime, null]);
   }
 
-  Future<String> timeTotal() async {
+  Future<int> edit(TimelineModel timeline) async {
     Database db = await instance.database;
-    List<Map> timeline = await db.rawQuery("SELECT SUM( ROUND( ( JULIANDAY(FinishTime) - JULIANDAY(StartTime) ) * 86400) ) AS time FROM Timeline;");
-    return (timeline[0]['time'] as String);
+    return await db.rawUpdate(
+        "UPDATE Timeline SET FinishTime = ? WHERE Id = (SELECT Id FROM Timeline ORDER BY Id DESC LIMIT 1)",
+        [timeline.finishTime]);
+  }
+
+  Future<int> remove() async {
+    Database db = await instance.database;
+    return await db.rawDelete(
+        "DELETE FROM Timeline WHERE Id = (SELECT Id FROM Timeline ORDER BY Id DESC LIMIT 1)");
+  }
+
+  Future<double> timeTotal() async {
+    Database db = await instance.database;
+    List<Map> timeline = await db.rawQuery(
+        "SELECT SUM( ROUND( ( JULIANDAY(FinishTime) - JULIANDAY(StartTime) ) * 86400) ) AS time FROM Timeline;");
+    return (timeline[0]['time'] as double);
+  }
+
+  String formatedTime({double timeInSecond}) {
+    int time = timeInSecond.round();
+    int sec = time % 60;
+    int hour = time ~/ 60;
+    int minute = hour % 60;
+    hour = hour ~/ 60;
+    return "$hour:$minute:$sec";
   }
 }

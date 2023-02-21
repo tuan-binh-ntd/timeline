@@ -35,7 +35,7 @@ class DatabaseHelper {
   Future<List<TimelineModel>> getTimelineList() async {
     Database db = await instance.database;
     var timeline = await db.rawQuery(
-        "SELECT id, startTime, finishTime, ROUND((JULIANDAY(FinishTime) - JULIANDAY(StartTime)) * 86400) AS Time FROM Timeline;");
+        "SELECT id, startTime, finishTime, ROUND((JULIANDAY(FinishTime) - JULIANDAY(StartTime)) * 86400) AS Time FROM Timeline ORDER BY Id DESC;");
     List<TimelineModel> timelineList = timeline.isNotEmpty
         ? timeline.map((c) => TimelineModel.fromMap(c)).toList()
         : [];
@@ -69,6 +69,19 @@ class DatabaseHelper {
     return (timeline[0]['time'] as double);
   }
 
+  Future<bool> checkDisableAddButton() async {
+    Database db = await instance.database;
+    List<Map> result = await db
+        .rawQuery("SELECT StartTime FROM Timeline ORDER BY Id DESC LIMIT 1");
+    if (result.length == 0) {
+      await add(TimelineModel(startTime: DateTime.now().toIso8601String()));
+      return true;
+    }
+    bool disable = result[0]['StartTime'].toString().substring(0, 10) ==
+        DateTime.now().toIso8601String().substring(0, 10);
+    return disable;
+  }
+
   String formatedTime({double timeInSecond}) {
     int time = timeInSecond.round();
     int sec = time % 60;
@@ -76,5 +89,19 @@ class DatabaseHelper {
     int minute = hour % 60;
     hour = hour ~/ 60;
     return "$hour:$minute:$sec";
+  }
+
+  Future<String> checkRemaningTime() async {
+    // 192 hours
+    int baseTime = 691200;
+    double time = await timeTotal();
+    int remainingTime = baseTime - time.round();
+    DateTime now = DateTime.now();
+    int lastDayInMonth = DateTime(now.year, now.month + 1, 0).day;
+    int remainingDay = lastDayInMonth - now.day;
+    String timePerDay =
+        formatedTime(timeInSecond: (remainingTime / remainingDay)) +
+            " giờ/$remainingDay ngày";
+    return timePerDay;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:timeline_management/model/timeline.dart';
 import 'database/database_helper.dart';
 
@@ -12,6 +13,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final textController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -171,70 +181,69 @@ class _HomePageState extends State<HomePage> {
                       );
               }),
           Expanded(
-            child: Align(
-              alignment: FractionalOffset.center,
-              child: Row(children: [
-                FutureBuilder<double>(
-                    future: DatabaseHelper.instance.timeTotal(),
-                    builder:
-                        (BuildContext context, AsyncSnapshot<double> snapshot) {
-                      if (!snapshot.hasData) {
-                        return Center(child: Text('Loading...'));
-                      }
-                      return snapshot.data == null
-                          ? Center(
-                              child: Text("Timeline"),
-                            )
-                          : Text(DatabaseHelper.instance
-                              .formatedTime(timeInSecond: snapshot.data));
-                    }),
-              ]),
-            ),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  FutureBuilder<double>(
+                      future: DatabaseHelper.instance.timeTotal(),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<double> snapshot) {
+                        if (!snapshot.hasData) {
+                          return Center(child: Text('Loading...'));
+                        }
+                        return snapshot.data == null
+                            ? Center(
+                                child: Text("Timeline"),
+                              )
+                            : Text(DatabaseHelper.instance
+                                .formatedTime(timeInSecond: snapshot.data));
+                      }),
+                  FutureBuilder<String>(
+                      future: DatabaseHelper.instance.checkRemaningTime(),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<String> snapshot) {
+                        if (!snapshot.hasData) {
+                          return SizedBox();
+                        }
+                        return snapshot.data != null
+                            ? Text(snapshot.data.toString())
+                            : Text("No data");
+                      }),
+                ]),
           )
         ],
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(left: 30),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              child: Icon(Icons.save),
-              onPressed: () async {
-                await DatabaseHelper.instance.add(
-                    TimelineModel(startTime: DateTime.now().toIso8601String()));
-                setState(() {
-                  textController.clear();
-                });
-              },
-            ),
-            Expanded(child: Container()),
-            FloatingActionButton(
-              child: Icon(Icons.edit),
-              onPressed: () async {
-                await DatabaseHelper.instance.edit(TimelineModel(
-                    finishTime: DateTime.now().toIso8601String()));
-                setState(() {
-                  textController.clear();
-                });
-              },
-            ),
-            Expanded(child: Container()),
-            FloatingActionButton(
-              child: Icon(Icons.remove),
-              onPressed: () async {
-                await DatabaseHelper.instance.remove();
-                setState(() {
-                  textController.clear();
-                });
-              },
-            )
-          ],
-        ),
-      ),
+      floatingActionButton: FutureBuilder<bool>(
+          future: DatabaseHelper.instance.checkDisableAddButton(),
+          builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+            if (!snapshot.hasData) {
+              return SizedBox();
+            }
+            return !snapshot.data
+                ? FloatingActionButton(
+                    child: Icon(Icons.save),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.add(TimelineModel(
+                          startTime: DateTime.now().toIso8601String()));
+                      setState(() {
+                        textController.clear();
+                      });
+                    },
+                  )
+                : FloatingActionButton(
+                    child: Icon(Icons.edit),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.edit(TimelineModel(
+                          finishTime: DateTime.now().toIso8601String()));
+                      setState(() {
+                        textController.clear();
+                      });
+                    },
+                  );
+          }),
       bottomNavigationBar: CurvedNavigationBar(
-        backgroundColor: Colors.deepPurple,
-        color: Colors.deepPurple.shade200,
+        backgroundColor: Colors.white,
+        color: Colors.blueAccent,
         animationDuration: Duration(milliseconds: 300),
         onTap: (index) {},
         items: [
@@ -253,5 +262,16 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  @override
+  dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
   }
 }

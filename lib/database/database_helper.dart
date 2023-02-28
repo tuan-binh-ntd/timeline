@@ -92,16 +92,40 @@ class DatabaseHelper {
   }
 
   Future<String> checkRemaningTime() async {
+    // check new month
+    // Database db = await instance.database;
+    // List<Map> result = await db
+    //     .rawQuery("SELECT FinishTime FROM Timeline ORDER BY Id DESC LIMIT 1");
+    // DateTime now = DateTime.now();
+    // if ((result[0]['FinishTime'].toString().substring(0, 4) ==
+    //             now.toString().substring(0, 4) &&
+    //         int.parse(result[0]['FinishTime'].toString().substring(5, 7)) <
+    //             int.parse(now.toString().substring(5, 7))) ||
+    //     int.parse(result[0]['FinishTime'].toString().substring(0, 4)) <
+    //         int.parse(now.toString().substring(0, 4))) {
+    //   await db.delete("Timeline");
+    // }
     // 192 hours
     int baseTime = 691200;
     double time = await timeTotal();
-    int remainingTime = baseTime - time.round();
-    DateTime now = DateTime.now();
-    int lastDayInMonth = DateTime(now.year, now.month + 1, 0).day;
-    int remainingDay = lastDayInMonth - now.day;
-    String timePerDay =
-        formatedTime(timeInSecond: (remainingTime / remainingDay)) +
-            " giờ/$remainingDay ngày";
-    return timePerDay;
+    if (baseTime >= time) {
+      int remainingTime = baseTime - time.round();
+      DateTime now = DateTime.now();
+      int lastDayInMonth = DateTime(now.year, now.month + 1, 0).day;
+      int remainingDay = lastDayInMonth - now.day;
+      String timePerDay =
+          formatedTime(timeInSecond: (remainingTime / remainingDay)) +
+              " giờ/$remainingDay ngày";
+      return timePerDay;
+    } else {
+      int overTime = time.round() - baseTime;
+      // DateTime now = DateTime.now();
+      // int lastDayInMonth = DateTime(now.year, now.month + 1, 0).day;
+      // int remainingDay = lastDayInMonth - now.day;
+      String timePerDay = "Đã đủ giờ. OT " +
+          formatedTime(timeInSecond: (overTime.ceilToDouble())) +
+          " giờ";
+      return timePerDay;
+    }
   }
 }
